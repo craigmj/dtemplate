@@ -3,8 +3,12 @@ set -e
 export GOPATH=`pwd`
 for p in \
 	'github.com/golang/glog' \
+	'golang.org/x/net/html' \
+	'github.com/lestrrat/go-libxml2' \
+	'gopkg.in/yaml.v2' \
+	"github.com/fsnotify/fsnotify" \
 	; do
-	echo $p; 
+
 	if [ ! -d src/$p ]; then
 		go get $p
 	fi
