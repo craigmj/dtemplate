@@ -4,8 +4,9 @@ import (
 	"io"
 	"strings"
 
-	"github.com/lestrrat/go-libxml2"
+	// "github.com/lestrrat/go-libxml2"
 	"github.com/lestrrat/go-libxml2/clib"
+	"github.com/lestrrat/go-libxml2/parser"
 	// "github.com/lestrrat/go-libxml2/dom"
 	"github.com/lestrrat/go-libxml2/types"
 )
@@ -15,7 +16,15 @@ type Node struct {
 }
 
 func ParseNode(in io.Reader) (*Node, error) {
-	d, err := libxml2.ParseReader(in)
+	parser := parser.New(
+		// parser.XMLParseRecover,
+		//parser.XMLParseNoEnt,
+		// parser.XMLParseCompact,  // default
+		parser.XMLParseNoBlanks, // default
+		// parser.XMLParseNoError,  // default
+		// parser.XMLParseNoWarning, // default
+	)
+	d, err := parser.ParseReader(in)
 	if err != nil {
 		return nil, err
 	}

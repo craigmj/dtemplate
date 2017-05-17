@@ -8,7 +8,6 @@ import (
 )
 
 func generateTemplates(sourceDir, destDir string, lang, name string, includeQuerySelect, watch bool) error {
-
 	C := make(chan bool)
 	go func() {
 		defer close(C)
