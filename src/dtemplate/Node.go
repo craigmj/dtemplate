@@ -87,6 +87,15 @@ func (n *Node) TypescriptType() string {
 	e := n.Node.(types.Element).LocalName()
 	e = strings.ToLower(e)
 	t, ok := _typescript_element_map[e]
+	// if e == `input` {
+	// 	inputType := n.GetAttribute(`type`)
+	// 	switch strings.ToLower(inputType) {
+	// 	case `radio`:
+	// 		return `HTMLRadioElement`
+	// 	case `checkbox`:
+	// 		return `HTMLCheckboxElement`
+	// 	}
+	// }
 	if ok {
 		return t
 	}

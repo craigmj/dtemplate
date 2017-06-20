@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/golang/glog"
 	"gopkg.in/yaml.v2"
 )
 
@@ -173,7 +172,7 @@ func loadTemplates(dir string) ([]*Template, error) {
 		// With libxml2, our node is already the first-child
 		// element
 		templates = append(templates, &Template{
-			Name:    relPath,
+			Name:    strings.Replace(relPath, "/", "_", -1),
 			Node:    node,
 			Raw:     raw,
 			Indices: findIndices(`data-set`, node),
@@ -182,7 +181,7 @@ func loadTemplates(dir string) ([]*Template, error) {
 		return nil
 	})
 	if nil != err {
-		glog.Fatal(err)
+		return nil, err
 	}
 	return templates, nil
 }

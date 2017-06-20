@@ -2,9 +2,9 @@ package dtemplate
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
-
-	"github.com/golang/glog"
+	// "github.com/golang/glog"
 )
 
 func generateTemplates(sourceDir, destDir string, lang, name string, includeQuerySelect, watch bool) error {
@@ -21,16 +21,25 @@ func generateTemplates(sourceDir, destDir string, lang, name string, includeQuer
 	}()
 
 	for range C {
-		templates, err := loadTemplates(sourceDir)
-		if nil != err {
-			glog.Fatal(err)
-			return err
+		f := func() {
+			// If we're watching, we catch all errors and log but ignore them.
+			if watch {
+				defer func() {
+					if err := recover(); nil != err {
+						fmt.Fprintf(os.Stderr, "ERR: %v\n", err)
+					}
+				}()
+			}
+			templates, err := loadTemplates(sourceDir)
+			if nil != err {
+				panic(err)
+			}
+			if err := render(destDir, lang, name, templates, includeQuerySelect); nil != err {
+				panic(err)
+			}
+			fmt.Println("Generated templates in ", sourceDir)
 		}
-		if err := render(destDir, lang, name, templates, includeQuerySelect); nil != err {
-			glog.Fatal(err)
-			return err
-		}
-		fmt.Println("Generated templates in ", sourceDir)
+		f()
 	}
 
 	return nil

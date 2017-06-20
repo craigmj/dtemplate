@@ -1,8 +1,9 @@
 package dtemplate
 
 import (
-	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 
 	"github.com/fsnotify/fsnotify"
 )
@@ -15,12 +16,35 @@ func Watch(dir string, C chan bool, filter func(n string) bool) {
 	if err := w.Add(dir); nil != err {
 		log.Fatal(err)
 	}
+	if err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if nil != err {
+			return err
+		}
+		if info.IsDir() {
+			if err := w.Add(path); nil != err {
+				log.Fatalf(`Failed to add Dir %s`, path)
+			}
+		}
+		return nil
+	}); nil != err {
+		log.Fatal(err)
+	}
 	for {
 		select {
 		case e := <-w.Events:
+			// fmt.Printf("EVT %s: %s\n", e.Op.String(), e.Name)
 			if filter(e.Name) {
-				fmt.Printf("EVT %s: %s\n", e.Op.String(), e.Name)
 				C <- true
+			}
+			switch e.Op {
+			case fsnotify.Create:
+				info, err := os.Lstat(e.Name)
+				if nil != err {
+					log.Fatal(err)
+				}
+				if info.IsDir() {
+					w.Add(e.Name)
+				}
 			}
 		case err := <-w.Errors:
 			log.Fatal(err)
