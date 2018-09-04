@@ -60,7 +60,7 @@ export namespace R {
 }	// end namespace R
 {{range .Templates -}}
 export class {{.Name}} {
-	public static _template : {{.Node.TypescriptType}};
+	protected static _template : {{.Node.TypescriptType}};
 	public el : {{.Node.TypescriptType}};
 	public $ : R.{{.Name}};
 	constructor() {

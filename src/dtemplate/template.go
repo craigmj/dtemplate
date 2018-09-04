@@ -138,6 +138,9 @@ func findIndices_recurse(attr string, parent *Node, path []int, indices *[]*Inde
 }
 
 func loadTemplates(dir string) ([]*Template, error) {
+	if strings.HasSuffix(dir, `/`) {
+		dir = dir[0: len(dir)-1]
+	}
 	templates := []*Template{}
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if nil != err {
@@ -171,12 +174,13 @@ func loadTemplates(dir string) ([]*Template, error) {
 
 		// With libxml2, our node is already the first-child
 		// element
-		templates = append(templates, &Template{
+		t := &Template{
 			Name:    strings.Replace(relPath, "/", "_", -1),
 			Node:    node,
 			Raw:     raw,
 			Indices: findIndices(`data-set`, node),
-		})
+		}
+		templates = append(templates, t)
 
 		return nil
 	})
@@ -214,7 +218,7 @@ func splitMetadata(in io.Reader) ([]byte, []byte, error) {
 				state = 1
 				continue
 			}
-			// At this point we must have YML starting, withou
+			// At this point we must have YML starting, without
 			// the --- prefix, which is fine- we can manage that
 			yml = bytes.NewBuffer(scan.Bytes())
 			yml.WriteString("\n")

@@ -2,34 +2,26 @@ package dtemplate
 
 import (
 	"io"
+	"io/ioutil"
 	"strings"
 
-	// "github.com/lestrrat/go-libxml2"
-	"github.com/lestrrat/go-libxml2/clib"
-	"github.com/lestrrat/go-libxml2/parser"
-	// "github.com/lestrrat/go-libxml2/dom"
-	"github.com/lestrrat/go-libxml2/types"
+	"xmlparse"
 )
 
 type Node struct {
-	Node types.Node
+	Node xmlparse.Node
 }
 
 func ParseNode(in io.Reader) (*Node, error) {
-	parser := parser.New(
-		// parser.XMLParseRecover,
-		//parser.XMLParseNoEnt,
-		// parser.XMLParseCompact,  // default
-		parser.XMLParseNoBlanks, // default
-		// parser.XMLParseNoError,  // default
-		// parser.XMLParseNoWarning, // default
-	)
-	d, err := parser.ParseReader(in)
-	if err != nil {
+	raw, err := ioutil.ReadAll(in)
+	if nil!=err {
 		return nil, err
 	}
-	n, err := d.DocumentElement()
-	return &Node{n}, err
+	d, err := xmlparse.Parse(raw)
+	if nil!=err {
+		return nil, err
+	}
+	return &Node{d.Root}, nil
 }
 
 func (n *Node) IsElement() bool {
@@ -39,14 +31,12 @@ func (n *Node) IsElement() bool {
 	if nil == n.Node {
 		panic("IsElement called on node.NODE NIL")
 	}
-	return n.Node.NodeType() == clib.ElementNode
+	return n.Node.Type() == xmlparse.ELEM
 }
 
 func (n *Node) FirstChild() *Node {
-	c, err := n.Node.FirstChild()
-	if nil != err {
-		return nil
-	}
+	c := n.Node.(*xmlparse.Element).FirstChild()
+
 	if nil == c {
 		return nil
 	}
@@ -54,10 +44,7 @@ func (n *Node) FirstChild() *Node {
 }
 
 func (n *Node) NextSibling() *Node {
-	s, err := n.Node.NextSibling()
-	if nil != err {
-		return nil
-	}
+	s := n.Node.NextSibling()
 	if nil == s {
 		return nil
 	}
@@ -65,15 +52,11 @@ func (n *Node) NextSibling() *Node {
 }
 
 func (n *Node) GetAttribute(attr string) string {
-	a, err := n.Node.(types.Element).GetAttribute(attr)
-	if nil != err {
-		return ``
-	}
-	return a.Value()
+	return n.Node.(*xmlparse.Element).GetAttribute(attr)
 }
 
 func (n *Node) RemoveAttribute(attr string) {
-	n.Node.(types.Element).RemoveAttribute(attr)
+	n.Node.(*xmlparse.Element).RemoveAttribute(attr)
 }
 
 func (n *Node) Render() string {
@@ -84,7 +67,7 @@ func (n *Node) Render() string {
 }
 
 func (n *Node) TypescriptType() string {
-	e := n.Node.(types.Element).LocalName()
+	e := n.Node.(*xmlparse.Element).LocalName()
 	e = strings.ToLower(e)
 	t, ok := _typescript_element_map[e]
 	// if e == `input` {
