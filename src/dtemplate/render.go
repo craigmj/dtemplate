@@ -72,11 +72,25 @@ export class {{.Name}} {
 			{{.Name}}._template = t;
 		}
 		let n = t.cloneNode(true) as {{.Node.TypescriptType}};
+		{{range .Indices}}{{if .IsThis}}
+		n = n{{.Path}} as {{.Node.TypescriptType}};
+		{{- end}}{{end}}
 		this.$ = {
 		{{- range .Indices}}{{if not .IsThis}}
 			{{.Name}}: n{{.Path}} as {{.Node.TypescriptType}},
 		{{- end}}{{end}}
 		};
+		/*
+		{{range .Indices}}
+		{{if eq "this" .Name}}{{else}}
+		if (!this.$.{{.Name}}) {
+			console.error("Failed to resolve item {{.Name}} on path {{.Path}} of ", n);
+			debugger;
+		} else {
+			console.log("{{.Name}} resolved to ", this.$.{{.Name}});
+		}
+		{{end}}{{end}}
+		*/
 		this.el = n;
 	}
 }

@@ -42,6 +42,9 @@ func (idx *Index) Path() string {
 		// path[i] = fmt.Sprintf(`.children[%d]`, p)
 		path[i] = fmt.Sprintf(`.childNodes[%d]`, p)
 	}
+	if 0<len(path) {
+		path[0]=``
+	}
 	return strings.Join(path, ``)
 }
 
