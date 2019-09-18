@@ -20,6 +20,11 @@ func generateTemplates(sourceDir, destDir string, lang, name string, includeQuer
 		})
 	}()
 
+	nameSeparator := "_"
+	switch lang {
+	case "cljs":
+		nameSeparator="-"
+	}
 	for range C {
 		f := func() {
 			// If we're watching, we catch all errors and log but ignore them.
@@ -30,7 +35,7 @@ func generateTemplates(sourceDir, destDir string, lang, name string, includeQuer
 					}
 				}()
 			}
-			templates, err := loadTemplates(sourceDir)
+			templates, err := loadTemplates(sourceDir, nameSeparator)
 			if nil != err {
 				panic(err)
 			}

@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"text/template"
+	`strings`
 	// "github.com/golang/glog"
 )
 
@@ -17,6 +18,12 @@ func render(out, lang, name string, templates []*Template, includeQuerySelect bo
 				return err.Error()
 			}
 			return string(raw)
+		},
+		"clj_string": func(in string) string {
+			return strings.ReplaceAll(in, `"`, `\"`)
+		},
+		"clj_name": func(in string) string {
+			return strings.ReplaceAll(in, `_`, "-")
 		},
 	}).Parse(_template[lang]))
 	var outf io.Writer
@@ -204,4 +211,5 @@ let {{.Class}} = (function() {
 	}
 })();
 `,
+`cljs`:cljsTemplate,
 }

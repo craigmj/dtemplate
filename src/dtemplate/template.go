@@ -48,6 +48,21 @@ func (idx *Index) Path() string {
 	return strings.Join(path, ``)
 }
 
+func (idx *Index) CljPath() string {
+	if nil==idx {
+		return ``
+	}
+	path := make([]string, len(idx.Pos))
+	for i, p := range idx.Pos {
+		path[i] = fmt.Sprintf("%d", p)
+	}
+	// if idx.IsThis() && 0<len(path) {
+	if 0 < len(path) {
+		path[0] = ``
+	}
+	return strings.Join(path, ` `)
+}
+
 type Template struct {
 	Name    string
 	Node    *Node
@@ -140,7 +155,7 @@ func findIndices_recurse(attr string, parent *Node, path []int, indices *[]*Inde
 	}
 }
 
-func loadTemplates(dir string) ([]*Template, error) {
+func loadTemplates(dir, nameSeparator string) ([]*Template, error) {
 	if strings.HasSuffix(dir, `/`) {
 		dir = dir[0: len(dir)-1]
 	}
@@ -178,7 +193,7 @@ func loadTemplates(dir string) ([]*Template, error) {
 		// With libxml2, our node is already the first-child
 		// element
 		t := &Template{
-			Name:    strings.Replace(relPath, "/", "_", -1),
+			Name:    strings.Replace(relPath, "/", nameSeparator, -1),
 			Node:    node,
 			Raw:     raw,
 			Indices: findIndices(`data-set`, node),
