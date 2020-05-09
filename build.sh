@@ -7,6 +7,7 @@ for p in \
 	'github.com/lestrrat/go-libxml2' \
 	'gopkg.in/yaml.v2' \
 	"github.com/fsnotify/fsnotify" \
+	`github.com/juju/errors` \
 	; do
 
 	if [ ! -d src/$p ]; then
