@@ -321,8 +321,9 @@ func processNodes(node xmlparse.Node, settings map[string]interface{}, cfg *conf
 				return err
 			}
 			cmd.Stdin = rin
+			raw := el.InnerRawText()
 			go func() {
-				io.Copy(win, strings.NewReader(el.InnerText()))
+				io.Copy(win, strings.NewReader(raw))
 				win.Close()
 			}()
 			cmd.Stderr = os.Stderr
@@ -330,11 +331,11 @@ func processNodes(node xmlparse.Node, settings map[string]interface{}, cfg *conf
 				return fmt.Errorf(`Failed running %s : %w`, strings.Join(args, ` `), err)
 			}
 			el.SetInnerText(out.String())
-			fmt.Println("--- Converted")
-			fmt.Println(el.InnerText())
-			fmt.Println("--- to")
-			fmt.Println(out.String())
-			fmt.Println("---------------------")
+			// fmt.Println("--- Converted")
+			// fmt.Println(raw)
+			// fmt.Println("--- to")
+			// fmt.Println(out.String())
+			// fmt.Println("---------------------")
 		}
 		return nil
 	})

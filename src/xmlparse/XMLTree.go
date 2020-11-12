@@ -22,6 +22,7 @@ type Node interface {
 	NextSibling() Node
 	Parent() *Element
 	String() string
+	RawString() string 		// string without entity encoding
 	InnerText() string
 	SetNextSibling(nextsibling Node)
 	Type() NodeType
@@ -135,6 +136,13 @@ func (r *RawNode) String() string {
 	}
 	return fmt.Sprintf("UNRECOGNIZED TYPE %d", r.nodeType)
 }
+func (r *RawNode) RawString() string {
+	if r.nodeType==ENTITY {
+		return `&`
+	}
+	return r.String()
+}
+
 func (r *RawNode) InnerText() string {
 	return r.content
 }
@@ -183,10 +191,48 @@ func (e *Element) String() string {
 	return out.String()
 }
 
+
+func (e *Element) RawString() string {
+	var out bytes.Buffer
+	if `` == e.tag { // THIS IS THE DOCUMENT
+		for _, c := range e.children {
+			fmt.Fprintf(&out, c.String())
+		}
+		return out.String()
+	}
+	fmt.Fprintf(&out, "<%s", e.tag)
+	for k, v := range e.attributes {
+		fmt.Fprintf(&out, " %s=\"%s\"", k, v)
+	}
+	// You cannot have an empty div - it causes all sorts of grief...
+	if 0 == len(e.children) && `div` != e.tag {
+		fmt.Fprintf(&out, "/>")
+	} else {
+		fmt.Fprintf(&out, ">")
+		if 0 == len(e.children) {
+			// if an element must be non-empty, we have to
+			// add some 'random' content to it here.
+			fmt.Fprintf(&out, ` `)
+		} else {
+			fmt.Fprintf(&out, e.InnerRawText())
+		}
+		fmt.Fprintf(&out, "</%s>", e.tag)
+	}
+	return out.String()
+}
+
+
 func (e *Element) InnerText() string {
 	var out bytes.Buffer
 	for _, c := range e.children {
 		fmt.Fprintf(&out, c.String())
+	}
+	return out.String()
+}
+func (e *Element) InnerRawText() string {
+	var out bytes.Buffer
+	for _, c := range e.children {
+		fmt.Fprintf(&out, c.RawString())
 	}
 	return out.String()
 }
