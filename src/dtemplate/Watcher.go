@@ -22,7 +22,7 @@ func Watch(dir string, C chan bool, filter func(n string) bool) {
 		}
 		if info.IsDir() {
 			if err := w.Add(path); nil != err {
-				log.Fatalf(`Failed to add Dir %s`, path)
+				log.Fatalf(`Failed to add dir %s`, path)
 			}
 		}
 		return nil

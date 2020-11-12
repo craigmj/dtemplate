@@ -58,6 +58,9 @@ func (n *Node) GetAttribute(attr string) string {
 func (n *Node) RemoveAttribute(attr string) {
 	n.Node.(*xmlparse.Element).RemoveAttribute(attr)
 }
+func (n *Node) Attributes() map[string]string {
+	return n.Node.(*xmlparse.Element).Attributes()
+}
 
 func (n *Node) Render() string {
 	if nil == n.Node {

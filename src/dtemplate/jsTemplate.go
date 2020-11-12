@@ -90,7 +90,14 @@ let {{.Class}} = (function() {
 
 	return function(t, dest={}) {
 		// Return a deep copy of the node
-		let n = templates[t].cloneNode(true);
+		let n = templates[t];
+		if (n.content) {
+			// console.log("template " + t + " is a TEMPLATE");
+			n = n.content;
+		} else {
+			// console.log("templates[t] = ", n);
+		}
+		n = n.cloneNode(true);
 		try {
 			for (let el of QuerySelectorAllIterate(n, '[data-set]')) {
 				let a = el.getAttribute('data-set');

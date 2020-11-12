@@ -22,9 +22,37 @@ type Node interface {
 	NextSibling() Node
 	Parent() *Element
 	String() string
+	InnerText() string
 	SetNextSibling(nextsibling Node)
 	Type() NodeType
 	GetAttribute(k string) string
+}
+
+type NodeWalker func (n Node, depth int) error 
+var SkipChildNodes = fmt.Errorf(`SkipChildNodes`)
+
+func Walk(n Node, f NodeWalker) error {
+	return walk(n, f, 0)
+}
+
+func walk(n Node, f NodeWalker, depth int) error {
+	var err error
+	if err = f(n, depth); nil!=err && SkipChildNodes!=err {
+		return err
+	}
+	if SkipChildNodes==err {
+		return nil
+	}
+	el, ok := n.(*Element)
+	if !ok {
+		return nil
+	}
+	for _, c := range el.children {
+		if err = walk(c, f, depth+1); nil!=err && SkipChildNodes!=err {
+			return err
+		}
+	}
+	return nil
 }
 
 type base struct {
@@ -70,8 +98,24 @@ func (e *Element) GetAttribute(k string) string {
 func (e *Element) RemoveAttribute(k string) {
 	delete(e.attributes, k)
 }
+func (e *Element) Attributes() map[string]string {
+	return e.attributes
+}
+
 func (e *Element) LocalName() string {
 	return e.tag
+}
+func (e *Element) SetInnerText(s string) {
+	r := RawNode{
+		base: base{
+			nodeType: RAW,
+			nextsibling: nil,
+			parent: e,
+		},
+		content: s,
+	}
+	e.children = []Node{&r}
+
 }
 
 func (r *RawNode) String() string {
@@ -90,6 +134,9 @@ func (r *RawNode) String() string {
 		return fmt.Sprintf("<!%s>", r.content)
 	}
 	return fmt.Sprintf("UNRECOGNIZED TYPE %d", r.nodeType)
+}
+func (r *RawNode) InnerText() string {
+	return r.content
 }
 
 func (e *Element) FirstChild() Node {
@@ -129,11 +176,17 @@ func (e *Element) String() string {
 			// add some 'random' content to it here.
 			fmt.Fprintf(&out, ` `)
 		} else {
-			for _, c := range e.children {
-				fmt.Fprintf(&out, c.String())
-			}
+			fmt.Fprintf(&out, e.InnerText())
 		}
 		fmt.Fprintf(&out, "</%s>", e.tag)
+	}
+	return out.String()
+}
+
+func (e *Element) InnerText() string {
+	var out bytes.Buffer
+	for _, c := range e.children {
+		fmt.Fprintf(&out, c.String())
 	}
 	return out.String()
 }

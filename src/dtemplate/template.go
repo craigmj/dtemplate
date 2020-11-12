@@ -9,8 +9,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	`os/exec`
 
 	"gopkg.in/yaml.v2"
+	`xmlparse`
 )
 
 type Index struct {
@@ -113,12 +115,28 @@ func findFirstElement(n *Node) *Node {
 func findIndices(attr string, node *Node) []*Index {
 	indices := []*Index{}
 	// Check whether the parent node is a attributed node
-	name := node.GetAttribute(attr)
-	if `` != name {
-		indices = append(indices, newIndex(name, node, []int{}))
-		// Remove the attribute after capturing the index
-		node.RemoveAttribute(attr)
+	for a,v := range node.Attributes() {
+		name := a
+		index := false
+		if attr == a {
+			index = true
+			name = v
+			node.RemoveAttribute(attr)
+		} else if ``!=a && '$'==a[1] {
+			node.RemoveAttribute(a)
+			name = a[1:]
+			index = true
+		}
+		if index {
+			indices = append(indices, newIndex(name, node, []int{}))
+		}
 	}
+	// name := node.GetAttribute(attr)
+	// if `` != name {
+	// 	indices = append(indices, newIndex(name, node, []int{}))
+	// 	// Remove the attribute after capturing the index
+	// 	node.RemoveAttribute(attr)
+	// }
 	findIndices_recurse(attr, node, []int{}, &indices)
 	return indices
 }
@@ -188,6 +206,10 @@ func loadTemplates(dir, nameSeparator string) ([]*Template, error) {
 		node, err := ParseNode(bytes.NewReader(xmlRaw))
 		if nil != err {
 			return fmt.Errorf(`Failed to parse HTML in %s`, path)
+		}
+
+		if err := processNodes(node.Node, settings); nil!=err {
+			return fmt.Errorf(`Failed processing nodes in %s: %s`, path, err.Error())
 		}
 
 		// With libxml2, our node is already the first-child
@@ -263,4 +285,51 @@ func splitMetadata(in io.Reader) ([]byte, []byte, error) {
 		return yml.Bytes(), data.Bytes(), nil
 	}
 	return []byte{}, data.Bytes(), nil
+}
+
+func processNodes(node xmlparse.Node, settings map[string]interface{}) error {
+	return xmlparse.Walk(node, func(n xmlparse.Node, depth int) error {
+		el, ok := n.(*xmlparse.Element)
+		if !ok {
+			return nil
+		}
+		if ``!=n.GetAttribute(`dtemplate-process`) {
+			proc := n.GetAttribute(`dtemplate-process`)
+
+			c, ok := settings[proc]
+			if !ok {
+				c = proc
+			}
+			cstring, ok := c.(string)
+			if !ok {
+				return fmt.Errorf(`Unable to convert setting %s to a string`, proc)
+			}
+
+			args := strings.Split(strings.TrimSpace(cstring), ` `)
+			cmd := exec.Command(args[0], args[1:]...)
+
+			var out bytes.Buffer
+			cmd.Stdout = &out
+			rin, win, err := os.Pipe()
+			if nil!=err {
+				return err
+			}
+			cmd.Stdin = rin
+			go func() {
+				io.Copy(win, strings.NewReader(el.InnerText()))
+				win.Close()
+			}()
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); nil!=err {
+				return fmt.Errorf(`Failed running %s : %w`, strings.Join(args, ` `), err)
+			}
+			el.SetInnerText(out.String())
+			fmt.Println("--- Converted")
+			fmt.Println(el.InnerText())
+			fmt.Println("--- to")
+			fmt.Println(out.String())
+			fmt.Println("---------------------")
+		}
+		return nil
+	})
 }
