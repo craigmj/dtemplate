@@ -322,6 +322,8 @@ func processNodes(node xmlparse.Node, settings map[string]interface{}, cfg *conf
 			}
 			cmd.Stdin = rin
 			raw := el.InnerRawText()
+			// fmt.Println("--- Converting")
+			// fmt.Println(raw)
 			go func() {
 				io.Copy(win, strings.NewReader(raw))
 				win.Close()
@@ -331,11 +333,10 @@ func processNodes(node xmlparse.Node, settings map[string]interface{}, cfg *conf
 				return fmt.Errorf(`Failed running %s : %w`, strings.Join(args, ` `), err)
 			}
 			el.SetInnerText(out.String())
-			// fmt.Println("--- Converted")
-			// fmt.Println(raw)
 			// fmt.Println("--- to")
 			// fmt.Println(out.String())
 			// fmt.Println("---------------------")
+			el.RemoveAttribute(`dtemplate-process`)
 		}
 		return nil
 	})

@@ -166,7 +166,7 @@ func (e *Element) String() string {
 	var out bytes.Buffer
 	if `` == e.tag { // THIS IS THE DOCUMENT
 		for _, c := range e.children {
-			fmt.Fprintf(&out, c.String())
+			fmt.Fprint(&out, c.String())
 		}
 		return out.String()
 	}
@@ -176,15 +176,15 @@ func (e *Element) String() string {
 	}
 	// You cannot have an empty div - it causes all sorts of grief...
 	if 0 == len(e.children) && `div` != e.tag {
-		fmt.Fprintf(&out, "/>")
+		fmt.Fprint(&out, "/>")
 	} else {
-		fmt.Fprintf(&out, ">")
+		fmt.Fprint(&out, ">")
 		if 0 == len(e.children) {
 			// if an element must be non-empty, we have to
 			// add some 'random' content to it here.
-			fmt.Fprintf(&out, ` `)
+			fmt.Fprint(&out, ` `)
 		} else {
-			fmt.Fprintf(&out, e.InnerText())
+			fmt.Fprint(&out, e.InnerText())
 		}
 		fmt.Fprintf(&out, "</%s>", e.tag)
 	}
@@ -196,7 +196,7 @@ func (e *Element) RawString() string {
 	var out bytes.Buffer
 	if `` == e.tag { // THIS IS THE DOCUMENT
 		for _, c := range e.children {
-			fmt.Fprintf(&out, c.String())
+			fmt.Fprint(&out, c.String())
 		}
 		return out.String()
 	}
@@ -206,15 +206,15 @@ func (e *Element) RawString() string {
 	}
 	// You cannot have an empty div - it causes all sorts of grief...
 	if 0 == len(e.children) && `div` != e.tag {
-		fmt.Fprintf(&out, "/>")
+		fmt.Fprint(&out, "/>")
 	} else {
-		fmt.Fprintf(&out, ">")
+		fmt.Fprint(&out, ">")
 		if 0 == len(e.children) {
 			// if an element must be non-empty, we have to
 			// add some 'random' content to it here.
-			fmt.Fprintf(&out, ` `)
+			fmt.Fprint(&out, ` `)
 		} else {
-			fmt.Fprintf(&out, e.InnerRawText())
+			fmt.Fprint(&out, e.InnerRawText())
 		}
 		fmt.Fprintf(&out, "</%s>", e.tag)
 	}
@@ -225,14 +225,14 @@ func (e *Element) RawString() string {
 func (e *Element) InnerText() string {
 	var out bytes.Buffer
 	for _, c := range e.children {
-		fmt.Fprintf(&out, c.String())
+		fmt.Fprint(&out, c.String())
 	}
 	return out.String()
 }
 func (e *Element) InnerRawText() string {
 	var out bytes.Buffer
 	for _, c := range e.children {
-		fmt.Fprintf(&out, c.RawString())
+		fmt.Fprint(&out, c.RawString())
 	}
 	return out.String()
 }
