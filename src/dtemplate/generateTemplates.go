@@ -5,9 +5,15 @@ import (
 	"os"
 	"path/filepath"
 	// "github.com/golang/glog"
+
+	`config`
 )
 
-func generateTemplates(sourceDir, destDir string, lang, name string, includeQuerySelect, watch bool) error {
+func generateTemplates(configFilename, sourceDir, destDir string, lang, name string, includeQuerySelect, watch bool) error {
+	cfg, err := config.ReadConfig(configFilename)
+	if nil!=err {
+		return err
+	}
 	C := make(chan bool)
 	go func() {
 		defer close(C)
@@ -35,7 +41,7 @@ func generateTemplates(sourceDir, destDir string, lang, name string, includeQuer
 					}
 				}()
 			}
-			templates, err := loadTemplates(sourceDir, nameSeparator)
+			templates, err := loadTemplates(sourceDir, nameSeparator, cfg)
 			if nil != err {
 				panic(err)
 			}

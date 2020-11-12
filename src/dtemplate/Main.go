@@ -13,9 +13,10 @@ func Main() {
 	watch := flag.Bool(`watch`, false, `Watch and recompile on changes`)
 	includeQuerySelect := flag.Bool("include-query-select", false, "Do not include the query selection functions in generated js")
 	lang := flag.String(`lang`, `js`, `Language: js|ts|cljs`)
+	config := flag.String(`config`, `dtemplate.yml`, `Configuration file for dtemplate`)
 	flag.Parse()
 
-	if err := generateTemplates(*dir, *out, *lang, *name, *includeQuerySelect, *watch); nil != err {
+	if err := generateTemplates(*config, *dir, *out, *lang, *name, *includeQuerySelect, *watch); nil != err {
 		glog.Fatal(err)
 	}
 

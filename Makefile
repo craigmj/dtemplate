@@ -20,6 +20,7 @@ prepare:
 	export GOPATH=`pwd`; \
 	go get -u github.com/kardianos/govendor; \
 	go get -u github.com/spf13/cobra/cobra; \
+	go get -u gopkg.in/yaml.v3; \
 	pushd src/$(PKG); \
 	../../bin/govendor init; \
 	../../bin/govendor sync; \

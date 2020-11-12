@@ -12,7 +12,9 @@ import (
 	`os/exec`
 
 	"gopkg.in/yaml.v2"
+
 	`xmlparse`
+	`config`
 )
 
 type Index struct {
@@ -173,7 +175,8 @@ func findIndices_recurse(attr string, parent *Node, path []int, indices *[]*Inde
 	}
 }
 
-func loadTemplates(dir, nameSeparator string) ([]*Template, error) {
+func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, error) {
+
 	if strings.HasSuffix(dir, `/`) {
 		dir = dir[0: len(dir)-1]
 	}
@@ -208,7 +211,7 @@ func loadTemplates(dir, nameSeparator string) ([]*Template, error) {
 			return fmt.Errorf(`Failed to parse HTML in %s`, path)
 		}
 
-		if err := processNodes(node.Node, settings); nil!=err {
+		if err := processNodes(node.Node, settings, cfg); nil!=err {
 			return fmt.Errorf(`Failed processing nodes in %s: %s`, path, err.Error())
 		}
 
@@ -287,7 +290,7 @@ func splitMetadata(in io.Reader) ([]byte, []byte, error) {
 	return []byte{}, data.Bytes(), nil
 }
 
-func processNodes(node xmlparse.Node, settings map[string]interface{}) error {
+func processNodes(node xmlparse.Node, settings map[string]interface{}, cfg *config.Config) error {
 	return xmlparse.Walk(node, func(n xmlparse.Node, depth int) error {
 		el, ok := n.(*xmlparse.Element)
 		if !ok {
@@ -298,7 +301,10 @@ func processNodes(node xmlparse.Node, settings map[string]interface{}) error {
 
 			c, ok := settings[proc]
 			if !ok {
-				c = proc
+				c, ok = cfg.Process[proc]
+				if !ok {
+					c = proc
+				}
 			}
 			cstring, ok := c.(string)
 			if !ok {
