@@ -24,19 +24,20 @@ type Node interface {
 	String() string
 	RawString() string 		// string without entity encoding
 	InnerText() string
+	InnerRawText() string
 	SetNextSibling(nextsibling Node)
 	Type() NodeType
 	GetAttribute(k string) string
 }
 
-type NodeWalker func (n Node, depth int) error 
+type NodeWalker func (n *Node, depth int) error 
 var SkipChildNodes = fmt.Errorf(`SkipChildNodes`)
 
-func Walk(n Node, f NodeWalker) error {
+func Walk(n *Node, f NodeWalker) error {
 	return walk(n, f, 0)
 }
 
-func walk(n Node, f NodeWalker, depth int) error {
+func walk(n *Node, f NodeWalker, depth int) error {
 	var err error
 	if err = f(n, depth); nil!=err && SkipChildNodes!=err {
 		return err
@@ -44,12 +45,12 @@ func walk(n Node, f NodeWalker, depth int) error {
 	if SkipChildNodes==err {
 		return nil
 	}
-	el, ok := n.(*Element)
+	el, ok := (*n).(*Element)
 	if !ok {
 		return nil
 	}
-	for _, c := range el.children {
-		if err = walk(c, f, depth+1); nil!=err && SkipChildNodes!=err {
+	for i, _ := range el.children {
+		if err = walk(&el.children[i], f, depth+1); nil!=err && SkipChildNodes!=err {
 			return err
 		}
 	}
@@ -144,6 +145,9 @@ func (r *RawNode) RawString() string {
 }
 
 func (r *RawNode) InnerText() string {
+	return r.content
+}
+func (r *RawNode) InnerRawText() string {
 	return r.content
 }
 

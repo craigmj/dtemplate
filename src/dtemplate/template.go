@@ -211,7 +211,7 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 			return fmt.Errorf(`Failed to parse HTML in %s`, path)
 		}
 
-		if err := processNodes(node.Node, settings, cfg); nil!=err {
+		if err := processNodes(&node.Node, settings, cfg); nil!=err {
 			return fmt.Errorf(`Failed processing nodes in %s: %s`, path, err.Error())
 		}
 
@@ -220,9 +220,13 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 		t := &Template{
 			Name:    strings.Replace(relPath, "/", nameSeparator, -1),
 			Node:    node,
-			Raw:     raw,
+			Raw:     []byte((*node).Node.RawString()),
 			Indices: findIndices(`data-set`, node),
 		}
+		fmt.Println(`-----`)
+		fmt.Println(`template node=`)
+		fmt.Println((t.Node.Node).RawString())
+		fmt.Println(`---`)
 		templates = append(templates, t)
 
 		return nil
@@ -290,14 +294,14 @@ func splitMetadata(in io.Reader) ([]byte, []byte, error) {
 	return []byte{}, data.Bytes(), nil
 }
 
-func processNodes(node xmlparse.Node, settings map[string]interface{}, cfg *config.Config) error {
-	return xmlparse.Walk(node, func(n xmlparse.Node, depth int) error {
-		el, ok := n.(*xmlparse.Element)
+func processNodes(node *xmlparse.Node, settings map[string]interface{}, cfg *config.Config) error {
+	return xmlparse.Walk(node, func(n *xmlparse.Node, depth int) error {
+		el, ok := (*n).(*xmlparse.Element)
 		if !ok {
 			return nil
 		}
-		if ``!=n.GetAttribute(`dtemplate-process`) {
-			proc := n.GetAttribute(`dtemplate-process`)
+		if ``!=el.GetAttribute(`dtemplate-process`) {
+			proc := el.GetAttribute(`dtemplate-process`)
 
 			c, ok := settings[proc]
 			if !ok {
@@ -322,8 +326,8 @@ func processNodes(node xmlparse.Node, settings map[string]interface{}, cfg *conf
 			}
 			cmd.Stdin = rin
 			raw := el.InnerRawText()
-			// fmt.Println("--- Converting")
-			// fmt.Println(raw)
+			fmt.Println("--- Converting")
+			fmt.Println(raw)
 			go func() {
 				io.Copy(win, strings.NewReader(raw))
 				win.Close()
@@ -333,10 +337,13 @@ func processNodes(node xmlparse.Node, settings map[string]interface{}, cfg *conf
 				return fmt.Errorf(`Failed running %s : %w`, strings.Join(args, ` `), err)
 			}
 			el.SetInnerText(out.String())
-			// fmt.Println("--- to")
-			// fmt.Println(out.String())
-			// fmt.Println("---------------------")
+			fmt.Println("--- to")
+			fmt.Println((*n).RawString())
+			fmt.Println("---------------------")
+			fmt.Println("--- parent is")
+			fmt.Println((*n).Parent().RawString())
 			el.RemoveAttribute(`dtemplate-process`)
+
 		}
 		return nil
 	})
