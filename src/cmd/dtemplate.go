@@ -2,6 +2,7 @@ package main
 
 import (
 	"dtemplate"
+	// `flag`
 )
 
 func main() {

@@ -10,8 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 	`os/exec`
+	`sync`
 
 	"gopkg.in/yaml.v2"
+	// "github.com/juju/errors"
 
 	`xmlparse`
 	`config`
@@ -181,6 +183,11 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 		dir = dir[0: len(dir)-1]
 	}
 	templates := []*Template{}
+
+	var wait sync.WaitGroup
+	ERR := make(chan error)
+	var templatesLock sync.Mutex
+
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if nil != err {
 			return err
@@ -190,55 +197,110 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 			// Only consider .html files
 			return nil
 		}
-		relPath := path[len(dir)+1 : len(path)-len(ext)]
-		raw, err := ioutil.ReadFile(path)
-		if nil != err {
-			return err
-		}
+		wait.Add(1)
+		go func(path, ext string) {
+			if err := func(path, ext string) error {
+				defer wait.Done()
+				relPath := path[len(dir)+1 : len(path)-len(ext)]
+				raw, err := ioutil.ReadFile(path)
+				if nil != err {
+					return err
+				}
 
-		metaRaw, xmlRaw, err := splitMetadata(bytes.NewReader(raw))
-		if nil != err {
-			return fmt.Errorf(`Failed to parse %s: %s`, path, err.Error())
-		}
+				// fmt.Println(`ABSOLUTE RAW = ----`,string(raw),`------`)
+				metaRaw, xmlRaw, err := splitMetadata(bytes.NewReader(raw))
+				if nil != err {
+					return fmt.Errorf(`Failed to parse %s: %s`, path, err.Error())
+				}
 
-		settings := map[string]interface{}{}
-		if err := yaml.Unmarshal(metaRaw, &settings); nil != err {
-			return fmt.Errorf(`Failed parsing yaml metadata in %s: %s`, path, err.Error())
-		}
+				settings := map[string]interface{}{}
+				if err := yaml.Unmarshal(metaRaw, &settings); nil != err {
+					return fmt.Errorf(`Failed parsing yaml metadata in %s: %s`, path, err.Error())
+				}
 
-		node, err := ParseNode(bytes.NewReader(xmlRaw))
-		if nil != err {
-			return fmt.Errorf(`Failed to parse HTML in %s`, path)
-		}
+				node, err := ParseNode(bytes.NewReader(xmlRaw))
+				if nil != err {
+					return fmt.Errorf(`Failed to parse HTML in %s`, path)
+				}
+				// fmt.Println(`RAW bytes = `, string(xmlRaw))
+				// fmt.Println(`-----`)
+				// fmt.Println(`unprocessed node = `)
+				// fmt.Println(node.Node.RawString())
 
-		if err := processNodes(&node.Node, settings, cfg); nil!=err {
-			return fmt.Errorf(`Failed processing nodes in %s: %s`, path, err.Error())
-		}
 
-		// With libxml2, our node is already the first-child
-		// element
-		t := &Template{
-			Name:    strings.Replace(relPath, "/", nameSeparator, -1),
-			Node:    node,
-			Raw:     []byte((*node).Node.RawString()),
-			Indices: findIndices(`data-set`, node),
-		}
-		fmt.Println(`-----`)
-		fmt.Println(`template node=`)
-		fmt.Println((t.Node.Node).RawString())
-		fmt.Println(`---`)
-		templates = append(templates, t)
+				if err := processNodes(&node.Node, settings, cfg); nil!=err {
+					return fmt.Errorf(`Failed processing nodes in %s: %s`, path, err.Error())
+				}
+
+				// With libxml2, our node is already the first-child
+				// element
+				t := &Template{
+					Name:    strings.Replace(relPath, "/", nameSeparator, -1),
+					Node:    node,
+					Raw:     []byte((*node).Node.RawString()),
+					Indices: findIndices(`data-set`, node),
+				}
+				// fmt.Println(`-----`)
+				// fmt.Println(`raw node=`)
+				// fmt.Println((t.Node.Node).RawString())
+				// fmt.Println(`---`)
+				templatesLock.Lock()
+				defer templatesLock.Unlock()
+				templates = append(templates, t)
+				return nil
+			}(path, ext); nil!=err {
+				ERR <- err
+			}
+		}(path, ext)
 
 		return nil
 	})
 	if nil != err {
 		return nil, err
 	}
+	go func() {
+		wait.Wait()
+		close(ERR)
+	}()
+
+	for err = range ERR {
+		fmt.Fprintln(os.Stderr, err.Error())
+	}
+	if nil!=err {
+		return nil, err
+	}
 	return templates, nil
 }
 
+func LineReader(in io.Reader) (LINE chan string, ERR chan error) {
+	LINE=make(chan string)
+	ERR = make(chan error,1)
+	go func() {
+		defer func() {
+			close(LINE)
+			close(ERR)
+		}()
+		read := bufio.NewReader(in)
+		for {
+			line, err := read.ReadString('\n')
+			if nil!=err && io.EOF != err {
+				ERR <- err
+				return
+			}
+			// trim trailing \n
+			if (0<len(line) && line[len(line)-1]=='\n') {
+				line = line[0:len(line)-1]
+			}
+			LINE <- line
+			if io.EOF == err {
+				return
+			}
+		}
+	}()
+	return LINE, ERR
+}
+
 func splitMetadata(in io.Reader) ([]byte, []byte, error) {
-	scan := bufio.NewScanner(in)
 	var yml *bytes.Buffer
 	var data *bytes.Buffer
 	// Possible states are
@@ -246,20 +308,24 @@ func splitMetadata(in io.Reader) ([]byte, []byte, error) {
 	// 1 => scanning YML
 	// 2 => scanning XML
 	state := 0 //
-	for scan.Scan() {
-		line := strings.TrimSpace(scan.Text())
+	LINES, ERR := LineReader(in)
+	lineCount := 0
+	for rawline := range LINES {
+		lineCount++
+		// trim the newline from the read rawline
+		line := strings.TrimSpace(rawline)
 		if "" == line {
 			continue
 		}
 		switch state {
 		case 0:
 			if '<' == line[0] {
-				data = bytes.NewBuffer(scan.Bytes())
+				data = bytes.NewBuffer([]byte(rawline))
 				data.WriteString("\n")
 				state = 2
 				continue
 			}
-			if "---" == scan.Text() {
+			if "---" == line {
 				// This has to be a start of yml
 				yml = bytes.NewBuffer([]byte{})
 				state = 1
@@ -267,26 +333,29 @@ func splitMetadata(in io.Reader) ([]byte, []byte, error) {
 			}
 			// At this point we must have YML starting, without
 			// the --- prefix, which is fine- we can manage that
-			yml = bytes.NewBuffer(scan.Bytes())
+			yml = bytes.NewBuffer([]byte(rawline))
 			yml.WriteString("\n")
 			state = 1
 			continue
 		case 1:
-			if "---" == scan.Text() {
+			if "---" == line {
 				data = bytes.NewBuffer([]byte{})
 				state = 2
 				continue
 			}
-			yml.Write(scan.Bytes())
+			yml.WriteString(rawline)
 			yml.WriteString("\n")
 			continue
 		case 2:
-			data.Write(scan.Bytes())
+			data.WriteString(rawline)
 			data.WriteString("\n")
 		}
 	}
+	if err := <- ERR; nil!=err {
+		return []byte{}, nil, err
+	}
 	if nil == data {
-		return nil, nil, fmt.Errorf(`No XML data found in file: did you finish the metadata with '---' on a separate line ?`)
+		return nil, nil, fmt.Errorf(`No XML data found in file after %d lines: did you finish the metadata with '---' on a separate line ?`, lineCount)
 	}
 	if nil != yml {
 		return yml.Bytes(), data.Bytes(), nil
@@ -303,19 +372,18 @@ func processNodes(node *xmlparse.Node, settings map[string]interface{}, cfg *con
 		if ``!=el.GetAttribute(`dtemplate-process`) {
 			proc := el.GetAttribute(`dtemplate-process`)
 
-			c, ok := settings[proc]
-			if !ok {
-				c, ok = cfg.Process[proc]
+			var process *config.Process
+			ms, ok := settings[proc]
+			if ok {
+				process = config.NewProcessFromMap(ms.(map[string]interface{}))
+			} else {
+				process, ok = cfg.Process[proc]
 				if !ok {
-					c = proc
+					process = &config.Process{Exec: proc}
 				}
 			}
-			cstring, ok := c.(string)
-			if !ok {
-				return fmt.Errorf(`Unable to convert setting %s to a string`, proc)
-			}
 
-			args := strings.Split(strings.TrimSpace(cstring), ` `)
+			args := strings.Split(strings.TrimSpace(process.Exec), ` `)
 			cmd := exec.Command(args[0], args[1:]...)
 
 			var out bytes.Buffer
@@ -329,7 +397,9 @@ func processNodes(node *xmlparse.Node, settings map[string]interface{}, cfg *con
 			fmt.Println("--- Converting")
 			fmt.Println(raw)
 			go func() {
+				fmt.Fprintln(win, process.Prefix)
 				io.Copy(win, strings.NewReader(raw))
+				fmt.Fprintln(win, process.Suffix)
 				win.Close()
 			}()
 			cmd.Stderr = os.Stderr
@@ -337,13 +407,12 @@ func processNodes(node *xmlparse.Node, settings map[string]interface{}, cfg *con
 				return fmt.Errorf(`Failed running %s : %w`, strings.Join(args, ` `), err)
 			}
 			el.SetInnerText(out.String())
-			fmt.Println("--- to")
-			fmt.Println((*n).RawString())
-			fmt.Println("---------------------")
-			fmt.Println("--- parent is")
-			fmt.Println((*n).Parent().RawString())
+			// fmt.Println("--- to")
+			// fmt.Println((*n).RawString())
+			// fmt.Println("---------------------")
+			// fmt.Println("--- parent is")
+			// fmt.Println((*n).Parent().RawString())
 			el.RemoveAttribute(`dtemplate-process`)
-
 		}
 		return nil
 	})

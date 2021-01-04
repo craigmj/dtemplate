@@ -66,6 +66,7 @@ let {{.Class}} = (function() {
 	let mk = function(k, html) {
 		let el = document.createElement('div');
 		el.innerHTML = html;
+		console.log("mk(",k,") html = ", html);
 
 		let c = el.firstElementChild;
 		while ((null!=c) && (Node.ELEMENT_NODE!=c.nodeType)) {
@@ -76,28 +77,45 @@ let {{.Class}} = (function() {
 			return mk('error', '<em>No child elements in template ' + k + '</em>');
 		}
 		el = c;
-		let et = el.querySelector('[data-set="this"]');
-		if (null!=et) {
-			el = et;
-			el.removeAttribute('data-set');
+		if ('function'==typeof el.querySelector) {
+			let et = el.querySelector('[data-set="this"]');
+			if (null!=et) {
+				el = et;
+				el.removeAttribute('data-set');
+			}
 		}
 		return el;
 	}
 
-	for (let i in templates) {
-		templates[i] = mk(i, templates[i]);
-	}
+	// for (let i in templates) {
+	// 	templates[i] = mk(i, templates[i]);
+	// }
 
 	return function(t, dest={}) {
-		// Return a deep copy of the node
+		// Return a deep copy of the node, created on first use
 		let n = templates[t];
-		if (n.content) {
-			// console.log("template " + t + " is a TEMPLATE");
-			n = n.content;
-		} else {
-			// console.log("templates[t] = ", n);
+		if ('string'==typeof(n)) {			
+			n = mk(t, n);
+			templates[t] = n;
 		}
-		n = n.cloneNode(true);
+		if (n.content) {
+			console.log("template " + t + " is a TEMPLATE");
+			n = n.content.cloneNode(true);
+			console.log("cloneNode(TEMPLATE " + t + ") returned ", n);
+
+			// for (let el of n.querySelectorAll('[data-set]')) {
+			// 	if (a.substr(0,1)=='$') {
+			// 		a = a.substr(1);
+			// 		el = jQuery(el);
+			// 	}
+			// 	dest[a] = el;
+			// }
+			// return [n, dest];
+		} else {
+			n = n.cloneNode(true);
+			console.log("templates[" + t + "] NOT A TEMPLATE = ", n);
+		}
+		//console.log("setting our content to ", n);
 		try {
 			for (let el of QuerySelectorAllIterate(n, '[data-set]')) {
 				let a = el.getAttribute('data-set');

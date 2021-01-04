@@ -244,7 +244,6 @@ func Parse(data []byte) (*Document, error) {
 	// Stack is used for storing strings
 	stack := NewStack()
 
-
 	fromMark := func(delta int) string {
 		return string(data[_mark:p+delta])
 	}
@@ -252,7 +251,7 @@ func Parse(data []byte) (*Document, error) {
 	loop := 0
 
 	
-//line src/xmlparse/xmlparser.go:256
+//line src/xmlparse/xmlparser.go:255
 	{
 	cs = xml_start
 	ts = 0
@@ -260,11 +259,11 @@ func Parse(data []byte) (*Document, error) {
 	act = 0
 	}
 
-//line src/xmlparse/xmlparser.rl:128
+//line src/xmlparse/xmlparser.rl:127
 	for p<eof {
 		//fmt.Println("In p<eof loop")
 		
-//line src/xmlparse/xmlparser.go:268
+//line src/xmlparse/xmlparser.go:267
 	{
 	var _klen int
 	var _trans int
@@ -287,7 +286,7 @@ _resume:
 //line NONE:1
 ts = p
 
-//line src/xmlparse/xmlparser.go:291
+//line src/xmlparse/xmlparser.go:290
 		}
 	}
 
@@ -474,7 +473,7 @@ p--
 te = p
 p--
 
-//line src/xmlparse/xmlparser.go:478
+//line src/xmlparse/xmlparser.go:477
 		}
 	}
 
@@ -488,7 +487,7 @@ _again:
 //line NONE:1
 ts = 0
 
-//line src/xmlparse/xmlparser.go:492
+//line src/xmlparse/xmlparser.go:491
 		}
 	}
 
@@ -510,7 +509,7 @@ ts = 0
 	_out: {}
 	}
 
-//line src/xmlparse/xmlparser.rl:131
+//line src/xmlparse/xmlparser.rl:130
 
 		loop++
 		if loop>100 {

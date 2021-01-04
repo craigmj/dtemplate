@@ -28,6 +28,7 @@ type Node interface {
 	SetNextSibling(nextsibling Node)
 	Type() NodeType
 	GetAttribute(k string) string
+	TagName() string
 }
 
 type NodeWalker func (n *Node, depth int) error 
@@ -77,6 +78,19 @@ func (b *base) SetNextSibling(n Node) {
 		return
 	}
 	b.nextsibling = n
+}
+func (b *base) TagName() string {
+	switch b.nodeType {
+	case 	RAW: return "(RAW)"
+	case ENTITY: return "(ENTITY)"
+	case EXCLAM: return "(EXCLAM)"
+	case CDATA: return "(CDATA)"
+	case COMMENT: return "(COMMENT)"
+	case PI: return "(PI)"
+	case ELEM: return "(ELEM)"
+	case DOCUMENT: return"(DOCUMENT)"
+	}
+	return fmt.Sprintf("NODE(%d)", b.nodeType)
 }
 
 type RawNode struct {
@@ -224,7 +238,9 @@ func (e *Element) RawString() string {
 	}
 	return out.String()
 }
-
+func (e *Element) TagName() string {
+	return e.tag
+}
 
 func (e *Element) InnerText() string {
 	var out bytes.Buffer
@@ -244,6 +260,10 @@ func (e *Element) InnerRawText() string {
 type Document struct {
 	Root    *Element
 	Current *Element
+}
+
+func (d *Document) TagName() string {
+	return "(DOCUMENT::DOCUMENT)"
 }
 
 func NewDocument() *Document {

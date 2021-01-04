@@ -117,7 +117,6 @@ func Parse(data []byte) (*Document, error) {
 	// Stack is used for storing strings
 	stack := NewStack()
 
-
 	fromMark := func(delta int) string {
 		return string(data[_mark:p+delta])
 	}
