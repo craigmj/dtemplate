@@ -87,10 +87,6 @@ let {{.Class}} = (function() {
 		return el;
 	}
 
-	// for (let i in templates) {
-	// 	templates[i] = mk(i, templates[i]);
-	// }
-
 	return function(t, dest={}) {
 		// Return a deep copy of the node, created on first use
 		let n = templates[t];
@@ -99,31 +95,21 @@ let {{.Class}} = (function() {
 			templates[t] = n;
 		}
 		if (n.content) {
-			//console.log("template " + t + " is a TEMPLATE");
 			n = n.content.cloneNode(true);
-			//console.log("cloneNode(TEMPLATE " + t + ") returned ", n);
-
-			// for (let el of n.querySelectorAll('[data-set]')) {
-			// 	if (a.substr(0,1)=='$') {
-			// 		a = a.substr(1);
-			// 		el = jQuery(el);
-			// 	}
-			// 	dest[a] = el;
-			// }
-			// return [n, dest];
 		} else {
 			n = n.cloneNode(true);
-			//console.log("templates[" + t + "] NOT A TEMPLATE = ", n);
 		}
-		//console.log("setting our content to ", n);
 		try {
-			for (let el of QuerySelectorAllIterate(n, '[data-set]')) {
-				let a = el.getAttribute('data-set');
-				if (a.substr(0,1)=='$') {
-					a = a.substr(1);
-					el = jQuery(el);
+			for (let attr of ['id', 'data-set']) {
+				for (let el of QuerySelectorAllIterate(n, '[' + attr + ']')) {
+					let a = el.getAttribute(attr);
+					if (a.substr(0,1)=='$') {
+						a = a.substr(1);
+						el = jQuery(el);
+						el.setAttribute(attr, a);
+					}
+					dest[a] = el;
 				}
-				dest[a] = el;
 			}
 		} catch (err) {
 			console.error("ERROR in DTemplate(" + t + "): ", err);

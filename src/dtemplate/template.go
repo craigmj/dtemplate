@@ -15,8 +15,8 @@ import (
 	"gopkg.in/yaml.v2"
 	// "github.com/juju/errors"
 
-	`xmlparse`
-	`config`
+	`dtemplate/xmlparse`
+	`dtemplate/config`
 )
 
 type Index struct {

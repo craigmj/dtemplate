@@ -5,7 +5,7 @@ PKG = dtemplate
 DEST = $(PKG)
 
 bin/$(DEST): $(SRC)
-	GOPATH=`pwd` go build -o bin/$(DEST) src/cmd/dtemplate.go
+	cd src/dtemplate; make
 	if [ ! -e /usr/bin/dtemplate ]; then \
 		sudo ln -s `pwd`/bin/dtemplate /usr/bin/dtemplate;	\
 	fi

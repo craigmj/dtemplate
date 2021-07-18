@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"xmlparse"
+	"dtemplate/xmlparse"
 )
 
 type Node struct {

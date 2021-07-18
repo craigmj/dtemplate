@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	// "github.com/golang/glog"
 
-	`config`
+	`dtemplate/config`
 )
 
 func generateTemplates(configFilename, sourceDir, destDir string, lang, name string, includeQuerySelect, watch bool) error {
