@@ -7,9 +7,10 @@ dtemplate takes a directory with a set of html files, and creates a Javascript f
 
 ## data-set
 
-Besides returning the element, it also returns an object with every DOM element referenced with a `data-set` attribute. If the key for the object in the data-set attribute starts with `$`, it will be `jQuery` wrapped.
+Besides returning the element, it also returns an object with every DOM element referenced with an `id` or `data-set` attribute: `data-set` attributes override `id` attributes, if both are present. If the key for the object in the data-set attribute starts with `$`, it will be `jQuery` wrapped.
 
-The only other catch is that if the DOM element has a data-set attribute of `this`, then that DOM element is returned, not the root-element of the document. The reason for this is that if you want to have a template that is a table-row `tr` for instance, you cannot actually instantiate a tr ourside a table, so you need a template that looks like this:
+The one 'catch' is that if the DOM element has a data-set attribute of `this`, then that DOM element is returned, not the root-element of the document. The reason for this is that if you want to have a template that is a table-row `tr` for instance, you cannot actually instantiate a tr ourside a table, so you need a template that looks like this:
+
 
     <table>
       <tr data-set="this">
