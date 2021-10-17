@@ -228,7 +228,7 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 				// fmt.Println(node.Node.RawString())
 
 
-				if err := processNodes(&node.Node, settings, cfg); nil!=err {
+				if err := processNodes(path, &node.Node, settings, cfg); nil!=err {
 					return fmt.Errorf(`Failed processing nodes in %s: %s`, path, err.Error())
 				}
 
@@ -363,11 +363,27 @@ func splitMetadata(in io.Reader) ([]byte, []byte, error) {
 	return []byte{}, data.Bytes(), nil
 }
 
-func processNodes(node *xmlparse.Node, settings map[string]interface{}, cfg *config.Config) error {
+func processNodes(srcFile string, node *xmlparse.Node, settings map[string]interface{}, cfg *config.Config) error {
 	return xmlparse.Walk(node, func(n *xmlparse.Node, depth int) error {
 		el, ok := (*n).(*xmlparse.Element)
 		if !ok {
 			return nil
+		}
+		// We process -include before -process, which means that we can run
+		// -process on a -include'd file (eg. for scss)
+		if ``!=el.GetAttribute(`dtemplate-include`) {
+			file := el.GetAttribute(`dtemplate-include`)
+			absFile, err := filepath.Abs(filepath.Join(filepath.Dir(srcFile), file))
+			if nil!=err {
+				return fmt.Errorf(`Failed to resolve include file '%s' in '%s': %w`, file, srcFile, err)
+			}
+			in, err := os.ReadFile(absFile)
+			if nil!=err {
+				return fmt.Errorf(`Failed to open include file '%s' in '%s': %w`,
+					file, srcFile, err)
+			}
+			el.SetInnerText(string(in))
+			el.RemoveAttribute(`dtemplate-include`);
 		}
 		if ``!=el.GetAttribute(`dtemplate-process`) {
 			proc := el.GetAttribute(`dtemplate-process`)
