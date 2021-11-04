@@ -44,8 +44,8 @@ let {{.Class}} = (function() {
 		try {
 			for (let attr of ['id', 'data-set']) {
 				let nodes = Array.from(n.querySelectorAll('[' + attr + ']'));
-				if (n.hasAttribute(attr)) {
-					nodes = nodes.unshift(n);
+				if ('function'==typeof n.hasAttribute && n.hasAttribute(attr)) {
+					nodes.unshift(n);
 				}
 				for (let el of nodes) {
 					let a = el.getAttribute(attr);
