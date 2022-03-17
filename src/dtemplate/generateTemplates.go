@@ -9,7 +9,7 @@ import (
 	`dtemplate/config`
 )
 
-func generateTemplates(configFilename, sourceDir, destDir string, lang, name string, includeQuerySelect, watch bool) error {
+func generateTemplates(configFilename, sourceDir, destDir string, lang, name string, includeQuerySelect, watch, export bool, pathSeparator string) error {
 	cfg, err := config.ReadConfig(configFilename)
 	if nil!=err {
 		return err
@@ -26,7 +26,7 @@ func generateTemplates(configFilename, sourceDir, destDir string, lang, name str
 		})
 	}()
 
-	nameSeparator := "_"
+	nameSeparator := pathSeparator
 	switch lang {
 	case "cljs":
 		nameSeparator="-"
@@ -45,7 +45,7 @@ func generateTemplates(configFilename, sourceDir, destDir string, lang, name str
 			if nil != err {
 				panic(err)
 			}
-			if err := render(destDir, lang, name, templates, includeQuerySelect); nil != err {
+			if err := render(destDir, lang, name, templates, includeQuerySelect, export); nil != err {
 				panic(err)
 			}
 			fmt.Println("Generated templates in ", sourceDir)

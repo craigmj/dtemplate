@@ -1,7 +1,11 @@
 package dtemplate
 
 var jsTemplate = `// dtemplate generated - do not edit
-let {{.Class}} = (function() {	
+{{if .Export -}}
+export const {{.Class}}
+{{- else -}}
+let {{.Class -}}
+{{- end -}} = (function() {	
 	let templates =
 		{{.T | JS}};
 
@@ -35,6 +39,10 @@ let {{.Class}} = (function() {
 		if ('string'==typeof(n)) {			
 			n = mk(t, n);
 			templates[t] = n;
+		}
+		if ('undefined'==typeof n) {
+			console.error('Failed to find template ' + t);
+			return [false,false];
 		}
 		if (n.content) {
 			n = n.content.cloneNode(true);

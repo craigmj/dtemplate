@@ -14,9 +14,11 @@ func Main() {
 	includeQuerySelect := flag.Bool("include-query-select", false, "Do not include the query selection functions in generated js")
 	lang := flag.String(`lang`, `js`, `Language: js|ts|cljs`)
 	config := flag.String(`config`, `dtemplate.yml`, `Configuration file for dtemplate`)
+	export := flag.Bool(`export`, true, `Include JS modules export on main DTemplate function`)
+	pathSeparator := flag.String(`separator`, `_`, `Separator for templates in subdirectories`)
 	flag.Parse()
 
-	if err := generateTemplates(*config, *dir, *out, *lang, *name, *includeQuerySelect, *watch); nil != err {
+	if err := generateTemplates(*config, *dir, *out, *lang, *name, *includeQuerySelect, *watch, *export, *pathSeparator); nil != err {
 		glog.Fatal(err)
 	}
 

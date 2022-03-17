@@ -9,7 +9,7 @@ import (
 	// "github.com/golang/glog"
 )
 
-func render(out, lang, name string, templates []*Template, includeQuerySelect bool) error {
+func render(out, lang, name string, templates []*Template, includeQuerySelect, export bool) error {
 	var err error
 	t := template.Must(template.New("").Funcs(map[string]interface{}{
 		"JS": func(in interface{}) string {
@@ -39,6 +39,7 @@ func render(out, lang, name string, templates []*Template, includeQuerySelect bo
 	}
 	if err = t.Execute(outf, map[string]interface{}{
 		"Class":              name,
+		"Export":			  export,
 		"T":                  mapTemplates(templates),
 		"Templates":          templates,
 		"includeQuerySelect": includeQuerySelect,
