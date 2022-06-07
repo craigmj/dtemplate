@@ -369,11 +369,15 @@ func processNodes(srcFile string, node *xmlparse.Node, settings map[string]inter
 		if !ok {
 			return nil
 		}
+		absFile, err := filepath.Abs(srcFile)
+		if nil!=err {
+			return fmt.Errorf(`Failed to read source file '%s': %w`, srcFile, err)
+		}
 		// We process -include before -process, which means that we can run
 		// -process on a -include'd file (eg. for scss)
 		if ``!=el.GetAttribute(`dtemplate-include`) {
 			file := el.GetAttribute(`dtemplate-include`)
-			absFile, err := filepath.Abs(filepath.Join(filepath.Dir(srcFile), file))
+			absFile, err = filepath.Abs(filepath.Join(filepath.Dir(srcFile), file))
 			if nil!=err {
 				return fmt.Errorf(`Failed to resolve include file '%s' in '%s': %w`, file, srcFile, err)
 			}
@@ -399,8 +403,23 @@ func processNodes(srcFile string, node *xmlparse.Node, settings map[string]inter
 				}
 			}
 
+			// @TODO Should properly parse the Exec to enable delimited arguments
 			args := strings.Split(strings.TrimSpace(process.Exec), ` `)
+			cwd, _ := os.Getwd()
+			// replace special templated strings in command arguments
+			replacements := map[string]string {
+				`%TEMPLATE_DIR%`: filepath.Dir(absFile),
+				`%TEMPLATE_FILE%`: absFile,
+				`%.%`: cwd,
+			}
+			for i, a := range args {
+				for k, v := range replacements {
+					a = strings.ReplaceAll(a,k,v)
+				}
+				args[i] = a
+			}
 			cmd := exec.Command(args[0], args[1:]...)
+			cmd.Dir = filepath.Dir(absFile)
 
 			var out bytes.Buffer
 			cmd.Stdout = &out
@@ -410,6 +429,9 @@ func processNodes(srcFile string, node *xmlparse.Node, settings map[string]inter
 			}
 			cmd.Stdin = rin
 			raw := el.InnerRawText()
+			fmt.Println("---")
+			fmt.Println("DIR = ", cmd.Dir)
+			fmt.Println(strings.Join(args, " "))
 			fmt.Println("--- Converting")
 			fmt.Println(raw)
 			go func() {
@@ -419,8 +441,10 @@ func processNodes(srcFile string, node *xmlparse.Node, settings map[string]inter
 				win.Close()
 			}()
 			cmd.Stderr = os.Stderr
+
+
 			if err := cmd.Run(); nil!=err {
-				return fmt.Errorf(`Failed running %s : %w`, strings.Join(args, ` `), err)
+				return fmt.Errorf(`Failed running [ %s ] : %w`, strings.Join(args, ` `), err)
 			}
 			el.SetInnerText(out.String())
 			// fmt.Println("--- to")
