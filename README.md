@@ -1,9 +1,15 @@
 # dtemplate - HTML templating without magic, for vanilla JS
-Javascript templating framework, super simple. The template framework should do nothing you cannot do by hand. There's no magic, just a bit of manipulation to create a simple Javascript function you could create yourself by hand.
+Javascript templating framework, super simple. The template framework should do nothing you cannot do by hand. There's no magic, just a bit of processing to create a simple Javascript function you could create yourself.
+
+## Simple Example
+
+`dtemplate -dir src/es6/admin -lang js -name "AdminTemplates" -out src/es6/admin/AdminTemplates.js -separator '/'`
+
+Will create a function `AdminTemplates` in `src/es6/admin/AdminTemplates.js`. You retrieve a DOM Element for any HTML file in `src/esc/admin` by the filename (without .html), for example `AdminTemplates('MainPage')` will return the contents of `src/es6/admin/MainPage.html` as a DOM Element. It also returns an associative array of all Node in that HTML file that are marked with `data-set` attributes.
 
 ## Super Simple
 
-dtemplate takes a directory with a set of html files, and creates a single Javascript function that will create instances of the DOM in each of those HTML files, named by the filename. It does this by pre-creating the DOM nodes, then deep-copying them. (I think this is fast.)
+dtemplate takes a directory with a set of html files, and creates a single Javascript function that will create instances of the DOM in each of those HTML files, named by the filename. It does this by pre-creating the DOM nodes, then deep-copying them.
 
 ## data-set or id
 
