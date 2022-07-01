@@ -245,13 +245,15 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 					// We process -include before -process, which means that we can run
 					// -process on a -include'd file (eg. for scss)
 					if ``!=el.GetAttribute(`dtemplate-child`) {
-
-						childTemplates = append(childTemplates, &Template{
-							Name: strings.Replace(
+						childTemplateName := strings.Replace(
 								relPath + "." +
-								strings.Join(getAncestorAttributes(el, `dtemplate-child`), `.`), "/", nameSeparator, -1),
+								strings.Join(getAncestorAttributes(el, `dtemplate-child`), `.`), "/", nameSeparator, -1)
+						childTemplate := &Template{
+							Name: childTemplateName,
 							Node: &Node{*n},
-						})
+						}
+						childTemplates = append(childTemplates, childTemplate)
+						//log.Infof(`Found child template %s : raw = %s`, childTemplate.Name, childTemplate.Node.
 					}
 					return nil
 				}); nil!=err {
@@ -263,7 +265,7 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 				}
 				// Only now can we set Raw content and indices
 				for _, c := range childTemplates {
-					c.Raw = []byte((*node).Node.RawString())
+					c.Raw = []byte(c.Node.Node.RawString())
 					c.Indices = findIndices(`data-set`, node)
 				}
 
