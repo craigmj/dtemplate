@@ -232,6 +232,42 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 					return fmt.Errorf(`Failed processing nodes in %s: %s`, path, err.Error())
 				}
 
+				// childTemplates are constructed by walking the node tree looking for 
+				// [dtemplate-child] elements. We don't remove them until all have been found,
+				// and only after they are all removed, do we set indices and the actual content,
+				// so that we don't get child templates appearing inside parent templates
+				childTemplates := []*Template{}
+				if err := xmlparse.Walk(&node.Node, func(n *xmlparse.Node, depth int) error {
+					el, ok := (*n).(*xmlparse.Element)
+					if !ok {
+						return nil
+					}
+					// We process -include before -process, which means that we can run
+					// -process on a -include'd file (eg. for scss)
+					if ``!=el.GetAttribute(`dtemplate-child`) {
+
+						childTemplates = append(childTemplates, &Template{
+							Name: strings.Replace(
+								relPath + "." +
+								strings.Join(getAncestorAttributes(el, `dtemplate-child`), `.`), "/", nameSeparator, -1),
+							Node: &Node{*n},
+						})
+					}
+					return nil
+				}); nil!=err {
+					return fmt.Errorf(`Failed processing child template in %s: %s`, path, err.Error())
+				}
+				// Next, we remove all the child template nodes
+				for _, c := range childTemplates {
+					c.Node.Node.Remove()
+				}
+				// Only now can we set Raw content and indices
+				for _, c := range childTemplates {
+					c.Raw = []byte((*node).Node.RawString())
+					c.Indices = findIndices(`data-set`, node)
+				}
+
+
 				// With libxml2, our node is already the first-child
 				// element
 				t := &Template{
@@ -247,6 +283,8 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 				templatesLock.Lock()
 				defer templatesLock.Unlock()
 				templates = append(templates, t)
+				// add all child templates
+				templates = append(templates, childTemplates...)
 				return nil
 			}(path, ext); nil!=err {
 				ERR <- err
@@ -270,6 +308,21 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 		return nil, err
 	}
 	return templates, nil
+}
+
+func getAncestorAttributes(e *xmlparse.Element, attr string) []string {
+	if nil!=e.Parent() {
+		if e.HasAttribute(attr) {
+			return []string{e.GetAttribute(attr)}
+		} else {
+			return []string{}
+		}
+	}
+	if e.HasAttribute(attr) {
+		return append(getAncestorAttributes(e.Parent(), attr), e.GetAttribute(attr))
+	} else {
+		return getAncestorAttributes(e.Parent(), attr)
+	}
 }
 
 func LineReader(in io.Reader) (LINE chan string, ERR chan error) {

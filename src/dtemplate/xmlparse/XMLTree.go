@@ -28,7 +28,9 @@ type Node interface {
 	SetNextSibling(nextsibling Node)
 	Type() NodeType
 	GetAttribute(k string) string
+	HasAttribute(k string) bool
 	TagName() string
+	Remove()
 }
 
 type NodeWalker func (n *Node, depth int) error 
@@ -105,11 +107,36 @@ type Element struct {
 	children   []Node
 }
 
+func (e *Element) RemoveNode(n Node) {
+	if nil==e {
+		return
+	}
+	for i, c := range e.children {
+		if c==n {
+			if 0<i {
+				e.children[i-1].SetNextSibling(n.NextSibling())
+			}
+			e.children = append(e.children[0:i], e.children[i+1:]...)
+			return
+		}
+	}
+}
+func (e *Element) Remove() {
+	e.parent.RemoveNode(e)
+}
+
 func (r *RawNode) GetAttribute(k string) string {
 	panic("Attempt to call GetAttribute on a non-element node")
 }
+func (r *RawNode) HasAttribute(k string) bool {
+	panic(`Attempt to call HasAttribute on a non-element node`)
+}
 func (e *Element) GetAttribute(k string) string {
 	return e.attributes[k]
+}
+func (e *Element) HasAttribute(k string) bool {
+	_, ok := e.attributes[k]
+	return ok
 }
 func (e *Element) RemoveAttribute(k string) {
 	delete(e.attributes, k)
@@ -134,6 +161,9 @@ func (e *Element) SetInnerText(s string) {
 
 }
 
+func (r *RawNode) Remove() {
+	r.parent.RemoveNode(r)
+}
 func (r *RawNode) String() string {
 	switch r.nodeType {
 	case RAW:
