@@ -227,7 +227,6 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 				// fmt.Println(`unprocessed node = `)
 				// fmt.Println(node.Node.RawString())
 
-
 				if err := processNodes(path, &node.Node, settings, cfg); nil!=err {
 					return fmt.Errorf(`Failed processing nodes in %s: %s`, path, err.Error())
 				}
@@ -266,8 +265,11 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 				// Only now can we set Raw content and indices
 				for _, c := range childTemplates {
 					c.Raw = []byte(c.Node.Node.RawString())
-					c.Indices = findIndices(`data-set`, node)
+					c.Indices = findIndices(`data-set`, c.Node)
+					fmt.Println(`---`, c.Name)
+					fmt.Println(string(c.Raw))
 				}
+
 
 
 				// With libxml2, our node is already the first-child
@@ -277,6 +279,10 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 					Node:    node,
 					Raw:     []byte((*node).Node.RawString()),
 					Indices: findIndices(`data-set`, node),
+				}
+				if 0<len(childTemplates) {
+					fmt.Println(`---`, t.Name)
+					fmt.Println(string(t.Raw))					
 				}
 				// fmt.Println(`-----`)
 				// fmt.Println(`raw node=`)
@@ -484,11 +490,11 @@ func processNodes(srcFile string, node *xmlparse.Node, settings map[string]inter
 			}
 			cmd.Stdin = rin
 			raw := el.InnerRawText()
-			fmt.Println("---")
-			fmt.Println("DIR = ", cmd.Dir)
-			fmt.Println(strings.Join(args, " "))
-			fmt.Println("--- Converting")
-			fmt.Println(raw)
+			// fmt.Println("---")
+			// fmt.Println("DIR = ", cmd.Dir)
+			// fmt.Println(strings.Join(args, " "))
+			// fmt.Println("--- Converting")
+			// fmt.Println(raw)
 			go func() {
 				fmt.Fprintln(win, process.Prefix)
 				io.Copy(win, strings.NewReader(raw))

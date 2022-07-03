@@ -121,6 +121,7 @@ func (e *Element) RemoveNode(n Node) {
 		}
 	}
 }
+
 func (e *Element) Remove() {
 	e.parent.RemoveNode(e)
 }

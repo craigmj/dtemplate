@@ -9,7 +9,7 @@ import (
 )
 
 func TestOne(t *testing.T) {
-	raw, err := ioutil.ReadFile(`../../tests/templates/test.html`)
+	raw, err := ioutil.ReadFile(`../../../tests/templates/test.html`)
 	if nil!=err {
 		t.Fatal(err.Error())
 	}
@@ -26,8 +26,18 @@ func TestOne(t *testing.T) {
 		t.Fatalf(`Expected template as root of document, but got something else`)
 	}
 	fmt.Fprintln(os.Stderr, d.Root.RawString())
-	t.Fatalf(`all good here`)
-		
+}
+
+func TestRemoveNode(t *testing.T) {
+	d, err := Parse([]byte(`<a><b><c></c><c>Second</c></b></a>`))
+	if nil!=err {
+		t.Errorf(`Failed to parse xml: %s`, err.Error())
+	}	
+	d.Root.FirstChild().(*Element).FirstChild().(*Element).FirstChild().Remove()
+	x := d.Root.RawString()
+	if x!=`<a><b><c>Second</c></b></a>` {
+		t.Errorf(`Removal returned '%s'`, x)
+	}
 }
 
 var badForm = `<template>
