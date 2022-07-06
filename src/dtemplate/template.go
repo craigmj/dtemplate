@@ -241,12 +241,11 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 					if !ok {
 						return nil
 					}
-					// We process -include before -process, which means that we can run
-					// -process on a -include'd file (eg. for scss)
 					if ``!=el.GetAttribute(`dtemplate-child`) {
 						childTemplateName := strings.Replace(
 								relPath + "." +
 								strings.Join(getAncestorAttributes(el, `dtemplate-child`), `.`), "/", nameSeparator, -1)
+						fmt.Println(`Creating childTemplate with name `, childTemplateName)
 						childTemplate := &Template{
 							Name: childTemplateName,
 							Node: &Node{*n},
@@ -319,7 +318,7 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 }
 
 func getAncestorAttributes(e *xmlparse.Element, attr string) []string {
-	if nil!=e.Parent() {
+	if nil==e.Parent() {
 		if e.HasAttribute(attr) {
 			return []string{e.GetAttribute(attr)}
 		} else {
