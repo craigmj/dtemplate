@@ -193,6 +193,12 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 			return err
 		}
 		ext := filepath.Ext(path)
+		if info.IsDir() {
+			_, err := os.Stat(filepath.Join(path, `.dtemplate-exclude`))
+			if nil==err {
+				return filepath.SkipDir
+			}
+		}
 		if ".html" != ext {
 			// Only consider .html files
 			return nil
