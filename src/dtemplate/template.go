@@ -484,6 +484,12 @@ func processNodes(srcFile string, node *xmlparse.Node, settings map[string]inter
 				}
 				args[i] = a
 			}
+			processPrefix, processSuffix := &process.Prefix, &process.Suffix
+			for _, a := range []*string{ processPrefix, processSuffix } {
+				for k, v := range replacements {
+					*a = strings.ReplaceAll(*a, k, v)
+				}
+			}
 			cmd := exec.Command(args[0], args[1:]...)
 			cmd.Dir = filepath.Dir(absFile)
 
@@ -501,16 +507,16 @@ func processNodes(srcFile string, node *xmlparse.Node, settings map[string]inter
 			// fmt.Println("--- Converting")
 			// fmt.Println(raw)
 			go func() {
-				fmt.Fprintln(win, process.Prefix)
+				fmt.Fprintln(win, *processPrefix)
 				io.Copy(win, strings.NewReader(raw))
-				fmt.Fprintln(win, process.Suffix)
+				fmt.Fprintln(win, *processSuffix)
 				win.Close()
 			}()
+
 			cmd.Stderr = os.Stderr
-
-
 			if err := cmd.Run(); nil!=err {
-				return fmt.Errorf(`Failed running [ %s ] : %w`, strings.Join(args, ` `), err)
+				return fmt.Errorf(`Failed running CWD=%s [ %s ] srcFile=%s: %w`, cmd.Dir, 
+					strings.Join(args, ` `), srcFile, err)
 			}
 			el.SetInnerText(out.String())
 			// fmt.Println("--- to")
