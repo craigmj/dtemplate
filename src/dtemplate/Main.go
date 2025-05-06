@@ -11,7 +11,7 @@ func Main() {
 	out := flag.String("out", "", "Output file")
 	name := flag.String(`name`, `DTemplate`, `Name for the generate class/function`)
 	watch := flag.Bool(`watch`, false, `Watch and recompile on changes`)
-	includeQuerySelect := flag.Bool("include-query-select", false, "Do not include the query selection functions in generated js")
+	includeQuerySelect := flag.Bool("include-query-select", false, "Include the query selection functions in generated js")
 	lang := flag.String(`lang`, `js`, `Language: js|ts|cljs`)
 	config := flag.String(`config`, `dtemplate.yml`, `Configuration file for dtemplate`)
 	export := flag.Bool(`export`, true, `Include JS modules export on main DTemplate function`)

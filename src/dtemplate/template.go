@@ -178,7 +178,6 @@ func findIndices_recurse(attr string, parent *Node, path []int, indices *[]*Inde
 }
 
 func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, error) {
-
 	if strings.HasSuffix(dir, `/`) {
 		dir = dir[0: len(dir)-1]
 	}
@@ -441,6 +440,7 @@ func processNodes(srcFile string, node *xmlparse.Node, settings map[string]inter
 		}
 		// We process -include before -process, which means that we can run
 		// -process on a -include'd file (eg. for scss)
+		process := ``
 		if ``!=el.GetAttribute(`dtemplate-include`) {
 			file := el.GetAttribute(`dtemplate-include`)
 			absFile, err = filepath.Abs(filepath.Join(filepath.Dir(srcFile), file))
@@ -454,76 +454,86 @@ func processNodes(srcFile string, node *xmlparse.Node, settings map[string]inter
 			}
 			el.SetInnerText(string(in))
 			el.RemoveAttribute(`dtemplate-include`);
+			process = filepath.Ext(file)
+			if 0<len(process) {
+				process=process[1:]	// Strip the leading . from the extension
+			}
 		}
-		if ``!=el.GetAttribute(`dtemplate-process`) {
+		if ``!=el.GetAttribute(`dtemplate-process`) || ``!=process {
 			proc := el.GetAttribute(`dtemplate-process`)
-
-			var process *config.Process
-			ms, ok := settings[proc]
-			if ok {
-				process = config.NewProcessFromMap(ms.(map[string]interface{}))
-			} else {
-				process, ok = cfg.Process[proc]
-				if !ok {
-					process = &config.Process{Exec: proc}
+			if ``==proc {
+				proc = process
+			}			
+			if `-`!=proc {	// Use - to skip processing of an included node				
+				var process *config.Process
+				ms, ok := settings[proc]
+				if ok {
+					process = config.NewProcessFromMap(ms.(map[string]interface{}))
+				} else {
+					process, ok = cfg.Process[proc]
+					if !ok {
+						process = &config.Process{Exec: proc}
+					}
 				}
-			}
+				// ilog.Printf("Processing node with %s", process.Exec)
 
-			// @TODO Should properly parse the Exec to enable delimited arguments
-			args := strings.Split(strings.TrimSpace(process.Exec), ` `)
-			cwd, _ := os.Getwd()
-			// replace special templated strings in command arguments
-			replacements := map[string]string {
-				`%TEMPLATE_DIR%`: filepath.Dir(absFile),
-				`%TEMPLATE_FILE%`: absFile,
-				`%.%`: cwd,
-			}
-			for i, a := range args {
-				for k, v := range replacements {
-					a = strings.ReplaceAll(a,k,v)
+				// @TODO Should properly parse the Exec to enable delimited arguments
+				args := strings.Split(strings.TrimSpace(process.Exec), ` `)
+				cwd, _ := os.Getwd()
+				// replace special templated strings in command arguments
+				replacements := map[string]string {
+					`%TEMPLATE_DIR%`: filepath.Dir(absFile),
+					`%TEMPLATE_FILE%`: absFile,
+					`%HOME%`: os.Getenv(`HOME`),
+					`%.%`: cwd,
 				}
-				args[i] = a
-			}
-			processPrefix, processSuffix := &process.Prefix, &process.Suffix
-			for _, a := range []*string{ processPrefix, processSuffix } {
-				for k, v := range replacements {
-					*a = strings.ReplaceAll(*a, k, v)
+				for i, a := range args {
+					for k, v := range replacements {
+						a = strings.ReplaceAll(a,k,v)
+					}
+					args[i] = a
 				}
-			}
-			cmd := exec.Command(args[0], args[1:]...)
-			cmd.Dir = filepath.Dir(absFile)
+				processPrefix, processSuffix := &process.Prefix, &process.Suffix
+				for _, a := range []*string{ processPrefix, processSuffix } {
+					for k, v := range replacements {
+						*a = strings.ReplaceAll(*a, k, v)
+					}
+				}
+				cmd := exec.Command(args[0], args[1:]...)
+				cmd.Dir = filepath.Dir(absFile)
 
-			var out bytes.Buffer
-			cmd.Stdout = &out
-			rin, win, err := os.Pipe()
-			if nil!=err {
-				return err
-			}
-			cmd.Stdin = rin
-			raw := el.InnerRawText()
-			// fmt.Println("---")
-			// fmt.Println("DIR = ", cmd.Dir)
-			// fmt.Println(strings.Join(args, " "))
-			// fmt.Println("--- Converting")
-			// fmt.Println(raw)
-			go func() {
-				fmt.Fprintln(win, *processPrefix)
-				io.Copy(win, strings.NewReader(raw))
-				fmt.Fprintln(win, *processSuffix)
-				win.Close()
-			}()
+				var out bytes.Buffer
+				cmd.Stdout = &out
+				rin, win, err := os.Pipe()
+				if nil!=err {
+					return err
+				}
+				cmd.Stdin = rin
+				raw := el.InnerRawText()
+				// fmt.Println("---")
+				// fmt.Println("DIR = ", cmd.Dir)
+				// fmt.Println(strings.Join(args, " "))
+				// fmt.Println("--- Converting")
+				// fmt.Println(raw)
+				go func() {
+					fmt.Fprintln(win, *processPrefix)
+					io.Copy(win, strings.NewReader(raw))
+					fmt.Fprintln(win, *processSuffix)
+					win.Close()
+				}()
 
-			cmd.Stderr = os.Stderr
-			if err := cmd.Run(); nil!=err {
-				return fmt.Errorf(`Failed running CWD=%s [ %s ] srcFile=%s: %w`, cmd.Dir, 
-					strings.Join(args, ` `), srcFile, err)
+				cmd.Stderr = os.Stderr
+				if err := cmd.Run(); nil!=err {
+					return fmt.Errorf(`Failed running CWD=%s [ %s ] srcFile=%s: %w`, cmd.Dir, 
+						strings.Join(args, ` `), srcFile, err)
+				}
+				el.SetInnerText(out.String())
+				// fmt.Println("--- to")
+				// fmt.Println((*n).RawString())
+				// fmt.Println("---------------------")
+				// fmt.Println("--- parent is")
+				// fmt.Println((*n).Parent().RawString())
 			}
-			el.SetInnerText(out.String())
-			// fmt.Println("--- to")
-			// fmt.Println((*n).RawString())
-			// fmt.Println("---------------------")
-			// fmt.Println("--- parent is")
-			// fmt.Println((*n).Parent().RawString())
 			el.RemoveAttribute(`dtemplate-process`)
 		}
 		return nil
