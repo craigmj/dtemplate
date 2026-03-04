@@ -5,18 +5,17 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
-	`os/exec`
-	`sync`
+	"sync"
 
 	"gopkg.in/yaml.v2"
 	// "github.com/juju/errors"
 
-	`dtemplate/xmlparse`
-	`dtemplate/config`
+	"dtemplate/config"
+	"dtemplate/xmlparse"
 )
 
 type Index struct {
@@ -48,14 +47,14 @@ func (idx *Index) Path() string {
 		// path[i] = fmt.Sprintf(`.children[%d]`, p)
 		path[i] = fmt.Sprintf(`.childNodes[%d]`, p)
 	}
-	if 0<len(path) {
-		path[0]=``
+	if 0 < len(path) {
+		path[0] = ``
 	}
 	return strings.Join(path, ``)
 }
 
 func (idx *Index) CljPath() string {
-	if nil==idx {
+	if nil == idx {
 		return ``
 	}
 	path := make([]string, len(idx.Pos))
@@ -119,14 +118,14 @@ func findFirstElement(n *Node) *Node {
 func findIndices(attr string, node *Node) []*Index {
 	indices := []*Index{}
 	// Check whether the parent node is a attributed node
-	for a,v := range node.Attributes() {
+	for a, v := range node.Attributes() {
 		name := a
 		index := false
 		if attr == a {
 			index = true
 			name = v
 			node.RemoveAttribute(attr)
-		} else if ``!=a && '$'==a[1] {
+		} else if `` != a && '$' == a[1] {
 			node.RemoveAttribute(a)
 			name = a[1:]
 			index = true
@@ -179,7 +178,7 @@ func findIndices_recurse(attr string, parent *Node, path []int, indices *[]*Inde
 
 func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, error) {
 	if strings.HasSuffix(dir, `/`) {
-		dir = dir[0: len(dir)-1]
+		dir = dir[0 : len(dir)-1]
 	}
 	templates := []*Template{}
 
@@ -194,7 +193,7 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 		ext := filepath.Ext(path)
 		if info.IsDir() {
 			_, err := os.Stat(filepath.Join(path, `.dtemplate-exclude`))
-			if nil==err {
+			if nil == err {
 				return filepath.SkipDir
 			}
 		}
@@ -207,7 +206,7 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 			if err := func(path, ext string) error {
 				defer wait.Done()
 				relPath := path[len(dir)+1 : len(path)-len(ext)]
-				raw, err := ioutil.ReadFile(path)
+				raw, err := os.ReadFile(path)
 				if nil != err {
 					return err
 				}
@@ -232,11 +231,11 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 				// fmt.Println(`unprocessed node = `)
 				// fmt.Println(node.Node.RawString())
 
-				if err := processNodes(path, &node.Node, settings, cfg); nil!=err {
+				if err := processNodes(path, &node.Node, settings, cfg); nil != err {
 					return fmt.Errorf(`Failed processing nodes in %s: %s`, path, err.Error())
 				}
 
-				// childTemplates are constructed by walking the node tree looking for 
+				// childTemplates are constructed by walking the node tree looking for
 				// [dtemplate-child] elements. We don't remove them until all have been found,
 				// and only after they are all removed, do we set indices and the actual content,
 				// so that we don't get child templates appearing inside parent templates
@@ -246,11 +245,11 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 					if !ok {
 						return nil
 					}
-					if ``!=el.GetAttribute(`dtemplate-child`) {
+					if `` != el.GetAttribute(`dtemplate-child`) {
 						childTemplateName := strings.Replace(
-								relPath + "." +
+							relPath+"."+
 								strings.Join(getAncestorAttributes(el, `dtemplate-child`), `.`), "/", nameSeparator, -1)
-						fmt.Println(`Creating childTemplate with name `, childTemplateName)
+						ilog.Printf(`Creating childTemplate (nameSeparator=%s) with name %s`, nameSeparator, childTemplateName)
 						childTemplate := &Template{
 							Name: childTemplateName,
 							Node: &Node{*n},
@@ -259,7 +258,7 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 						//log.Infof(`Found child template %s : raw = %s`, childTemplate.Name, childTemplate.Node.
 					}
 					return nil
-				}); nil!=err {
+				}); nil != err {
 					return fmt.Errorf(`Failed processing child template in %s: %s`, path, err.Error())
 				}
 				// Next, we remove all the child template nodes
@@ -270,11 +269,10 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 				for _, c := range childTemplates {
 					c.Raw = []byte(c.Node.Node.RawString())
 					c.Indices = findIndices(`data-set`, c.Node)
-					fmt.Println(`---`, c.Name)
-					fmt.Println(string(c.Raw))
+					ilog.Printf("Child Template: %s", c.Name)
+					//loadTemplatesfmt.Println(`---`, c.Name)
+					//fmt.Println(string(c.Raw))
 				}
-
-
 
 				// With libxml2, our node is already the first-child
 				// element
@@ -284,9 +282,9 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 					Raw:     []byte((*node).Node.RawString()),
 					Indices: findIndices(`data-set`, node),
 				}
-				if 0<len(childTemplates) {
-					fmt.Println(`---`, t.Name)
-					fmt.Println(string(t.Raw))					
+				if 0 < len(childTemplates) {
+					ilog.Printf(`Child template: %s`, t.Name)
+					//fmt.Println(string(t.Raw))
 				}
 				// fmt.Println(`-----`)
 				// fmt.Println(`raw node=`)
@@ -298,7 +296,7 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 				// add all child templates
 				templates = append(templates, childTemplates...)
 				return nil
-			}(path, ext); nil!=err {
+			}(path, ext); nil != err {
 				ERR <- err
 			}
 		}(path, ext)
@@ -314,16 +312,17 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 	}()
 
 	for err = range ERR {
+		elog.Printf("ERR: %s", err.Error())
 		fmt.Fprintln(os.Stderr, err.Error())
 	}
-	if nil!=err {
+	if nil != err {
 		return nil, err
 	}
 	return templates, nil
 }
 
 func getAncestorAttributes(e *xmlparse.Element, attr string) []string {
-	if nil==e.Parent() {
+	if nil == e.Parent() {
 		if e.HasAttribute(attr) {
 			return []string{e.GetAttribute(attr)}
 		} else {
@@ -338,8 +337,8 @@ func getAncestorAttributes(e *xmlparse.Element, attr string) []string {
 }
 
 func LineReader(in io.Reader) (LINE chan string, ERR chan error) {
-	LINE=make(chan string)
-	ERR = make(chan error,1)
+	LINE = make(chan string)
+	ERR = make(chan error, 1)
 	go func() {
 		defer func() {
 			close(LINE)
@@ -348,13 +347,13 @@ func LineReader(in io.Reader) (LINE chan string, ERR chan error) {
 		read := bufio.NewReader(in)
 		for {
 			line, err := read.ReadString('\n')
-			if nil!=err && io.EOF != err {
+			if nil != err && io.EOF != err {
 				ERR <- err
 				return
 			}
 			// trim trailing \n
-			if (0<len(line) && line[len(line)-1]=='\n') {
-				line = line[0:len(line)-1]
+			if 0 < len(line) && line[len(line)-1] == '\n' {
+				line = line[0 : len(line)-1]
 			}
 			LINE <- line
 			if io.EOF == err {
@@ -416,7 +415,7 @@ func splitMetadata(in io.Reader) ([]byte, []byte, error) {
 			data.WriteString("\n")
 		}
 	}
-	if err := <- ERR; nil!=err {
+	if err := <-ERR; nil != err {
 		return []byte{}, nil, err
 	}
 	if nil == data {
@@ -435,36 +434,36 @@ func processNodes(srcFile string, node *xmlparse.Node, settings map[string]inter
 			return nil
 		}
 		absFile, err := filepath.Abs(srcFile)
-		if nil!=err {
+		if nil != err {
 			return fmt.Errorf(`Failed to read source file '%s': %w`, srcFile, err)
 		}
 		// We process -include before -process, which means that we can run
 		// -process on a -include'd file (eg. for scss)
 		process := ``
-		if ``!=el.GetAttribute(`dtemplate-include`) {
+		if `` != el.GetAttribute(`dtemplate-include`) {
 			file := el.GetAttribute(`dtemplate-include`)
 			absFile, err = filepath.Abs(filepath.Join(filepath.Dir(srcFile), file))
-			if nil!=err {
+			if nil != err {
 				return fmt.Errorf(`Failed to resolve include file '%s' in '%s': %w`, file, srcFile, err)
 			}
 			in, err := os.ReadFile(absFile)
-			if nil!=err {
+			if nil != err {
 				return fmt.Errorf(`Failed to open include file '%s' in '%s': %w`,
 					file, srcFile, err)
 			}
 			el.SetInnerText(string(in))
-			el.RemoveAttribute(`dtemplate-include`);
+			el.RemoveAttribute(`dtemplate-include`)
 			process = filepath.Ext(file)
-			if 0<len(process) {
-				process=process[1:]	// Strip the leading . from the extension
+			if 0 < len(process) {
+				process = process[1:] // Strip the leading . from the extension
 			}
 		}
-		if ``!=el.GetAttribute(`dtemplate-process`) || ``!=process {
+		if `` != el.GetAttribute(`dtemplate-process`) || `` != process {
 			proc := el.GetAttribute(`dtemplate-process`)
-			if ``==proc {
+			if `` == proc {
 				proc = process
-			}			
-			if `-`!=proc {	// Use - to skip processing of an included node				
+			}
+			if `-` != proc { // Use - to skip processing of an included node
 				var process *config.Process
 				ms, ok := settings[proc]
 				if ok {
@@ -481,20 +480,20 @@ func processNodes(srcFile string, node *xmlparse.Node, settings map[string]inter
 				args := strings.Split(strings.TrimSpace(process.Exec), ` `)
 				cwd, _ := os.Getwd()
 				// replace special templated strings in command arguments
-				replacements := map[string]string {
-					`%TEMPLATE_DIR%`: filepath.Dir(absFile),
+				replacements := map[string]string{
+					`%TEMPLATE_DIR%`:  filepath.Dir(absFile),
 					`%TEMPLATE_FILE%`: absFile,
-					`%HOME%`: os.Getenv(`HOME`),
-					`%.%`: cwd,
+					`%HOME%`:          os.Getenv(`HOME`),
+					`%.%`:             cwd,
 				}
 				for i, a := range args {
 					for k, v := range replacements {
-						a = strings.ReplaceAll(a,k,v)
+						a = strings.ReplaceAll(a, k, v)
 					}
 					args[i] = a
 				}
 				processPrefix, processSuffix := &process.Prefix, &process.Suffix
-				for _, a := range []*string{ processPrefix, processSuffix } {
+				for _, a := range []*string{processPrefix, processSuffix} {
 					for k, v := range replacements {
 						*a = strings.ReplaceAll(*a, k, v)
 					}
@@ -505,7 +504,7 @@ func processNodes(srcFile string, node *xmlparse.Node, settings map[string]inter
 				var out bytes.Buffer
 				cmd.Stdout = &out
 				rin, win, err := os.Pipe()
-				if nil!=err {
+				if nil != err {
 					return err
 				}
 				cmd.Stdin = rin
@@ -523,8 +522,8 @@ func processNodes(srcFile string, node *xmlparse.Node, settings map[string]inter
 				}()
 
 				cmd.Stderr = os.Stderr
-				if err := cmd.Run(); nil!=err {
-					return fmt.Errorf(`Failed running CWD=%s [ %s ] srcFile=%s: %w`, cmd.Dir, 
+				if err := cmd.Run(); nil != err {
+					return fmt.Errorf(`Failed running CWD=%s [ %s ] srcFile=%s: %w`, cmd.Dir,
 						strings.Join(args, ` `), srcFile, err)
 				}
 				el.SetInnerText(out.String())

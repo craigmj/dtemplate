@@ -6,12 +6,12 @@ import (
 	"path/filepath"
 	// "github.com/golang/glog"
 
-	`dtemplate/config`
+	"dtemplate/config"
 )
 
 func generateTemplates(configFilename, sourceDir, destDir string, lang, name string, includeQuerySelect, watch, export bool, pathSeparator string) error {
 	cfg, err := config.ReadConfig(configFilename)
-	if nil!=err {
+	if nil != err {
 		return err
 	}
 	C := make(chan bool)
@@ -29,7 +29,7 @@ func generateTemplates(configFilename, sourceDir, destDir string, lang, name str
 	nameSeparator := pathSeparator
 	switch lang {
 	case "cljs":
-		nameSeparator="-"
+		nameSeparator = "-"
 	}
 	for range C {
 		f := func() {
@@ -48,7 +48,7 @@ func generateTemplates(configFilename, sourceDir, destDir string, lang, name str
 			if err := render(destDir, lang, name, templates, includeQuerySelect, export); nil != err {
 				panic(err)
 			}
-			fmt.Println("Generated templates in ", sourceDir)
+			ilog.Printf("Generated templates in %s", sourceDir)
 		}
 		f()
 	}
