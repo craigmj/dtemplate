@@ -6,7 +6,7 @@ DEST = $(PKG)
 
 bin/$(DEST): $(SRC)
 	set -xe; \
-	cd src/dtemplate; make; \
+	pushd src/dtemplate; make; popd; \
 	if [ ! -e /usr/bin/dtemplate ]; then \
 		sudo ln -s `pwd`/bin/dtemplate /usr/bin/dtemplate;	\
 	fi
