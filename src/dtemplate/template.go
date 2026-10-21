@@ -201,6 +201,7 @@ func loadTemplates(dir, nameSeparator string, cfg *config.Config) ([]*Template, 
 			// Only consider .html files
 			return nil
 		}
+		// ilog.Printf(`Considering %s/%s`, dir, path)
 		wait.Add(1)
 		go func(path, ext string) {
 			if err := func(path, ext string) error {

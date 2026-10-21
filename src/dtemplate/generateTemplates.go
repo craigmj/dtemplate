@@ -41,6 +41,7 @@ func generateTemplates(configFilename, sourceDir, destDir string, lang, name str
 					}
 				}()
 			}
+			// ilog.Printf("Loading templatess for sourceDir='%s'", sourceDir)
 			templates, err := loadTemplates(sourceDir, nameSeparator, cfg)
 			if nil != err {
 				panic(err)
